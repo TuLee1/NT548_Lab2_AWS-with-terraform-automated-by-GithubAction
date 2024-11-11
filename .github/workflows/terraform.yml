@@ -1,0 +1,44 @@
+name: Terraform Deployment
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Bước 1: Lấy mã nguồn
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      # Bước 2: Thiết lập Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+
+      # Bước 3: Cấu hình AWS credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      # Bước 4: Khởi tạo Terraform
+      - name: Terraform Init
+        run: terraform init
+
+      # Bước 5: Lập kế hoạch triển khai Terraform (khi có pull request)
+      - name: Terraform Plan
+        if: github.event_name == 'pull_request'
+        run: terraform plan
+
+      # Bước 6: Triển khai hạ tầng (khi đẩy lên main)
+      - name: Terraform Apply
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve
