@@ -53,12 +53,14 @@ This project demonstrates the deployment of AWS infrastructure using Terraform, 
 ```plaintext
 project-directory/
 |— README.md            # Documentation
-|— main.tf               # Terraform configuration file
-|— variables.tf          # Input variables for Terraform
-|— outputs.tf            # Outputs of Terraform resources
+|— main.tf              # Terraform configuration file
+|— variables.tf         # Input variables for Terraform
+|— outputs.tf           # Outputs of Terraform resources
+|— provider.tf          # Provider configuration for AWS
 |— .github/
     ├── workflows/
         └── terraform.yml  # GitHub Actions workflow
+
 ```
 
 ### **File Details**
