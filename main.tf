@@ -12,7 +12,7 @@ resource "aws_vpc" "main" {
 resource "aws_subnet" "public_subnet" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.public_subnet_cidr
-  map_public_ip_on_launch = true
+  map_public_ip_on_launch = false  # Disable public IP by default
   availability_zone       = var.availability_zone
   tags = {
     Name = "public_subnet"
@@ -87,33 +87,50 @@ resource "aws_route_table_association" "private_association" {
 
 # Tạo Security Group cho EC2
 resource "aws_security_group" "ec2_sg" {
-  vpc_id = aws_vpc.main.id
+  vpc_id      = aws_vpc.main.id
+  description = "Security group for EC2 instances"
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["your-trusted-ip/32"]  # Replace with your IP
+    description = "Allow SSH from trusted IP"
   }
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
   }
   tags = {
     Name = "ec2_security_group"
   }
 }
 
-
 # Tạo EC2 Instance
 resource "aws_instance" "web_server" {
-  ami           = var.ami_id
-  instance_type = var.instance_type
-  subnet_id     = aws_subnet.public_subnet.id
- vpc_security_group_ids = [aws_security_group.ec2_sg.id]  # Sử dụng ID của Security Group
+  ami             = var.ami_id
+  instance_type   = var.instance_type
+  subnet_id       = aws_subnet.public_subnet.id
+  vpc_security_group_ids = [aws_security_group.ec2_sg.id]
+  monitoring      = true  # Enable detailed monitoring
+  metadata_options {
+    http_tokens = "required"  # Use IMDSv2 only
+  }
   tags = {
     Name = "web_server"
   }
 }
 
+# Tạo VPC Flow Logs
+resource "aws_cloudwatch_log_group" "vpc_log_group" {
+  name = "vpc-flow-logs"
+}
+
+resource "aws_flow_log" "vpc_flow_log" {
+  log_destination      = aws_cloudwatch_log_group.vpc_log_group.arn
+  log_destination_type = "cloud-watch-logs"
+  traffic_type         = "ALL"
+  vpc_id               = aws_vpc.main.id
+}
