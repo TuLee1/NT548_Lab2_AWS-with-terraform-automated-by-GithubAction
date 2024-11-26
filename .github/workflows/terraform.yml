@@ -12,6 +12,10 @@ jobs:
   terraform:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read  # Cấp quyền đọc repository
+      id-token: write  # Cấp quyền ghi id-token
+
     steps:
       # Bước 1: Lấy mã nguồn
       - name: Checkout repository
