@@ -12,7 +12,7 @@ resource "aws_vpc" "main" {
 resource "aws_subnet" "public_subnet" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.public_subnet_cidr
-  map_public_ip_on_launch = false  # Disable public IP by default
+  map_public_ip_on_launch = false
   availability_zone       = var.availability_zone
   tags = {
     Name = "public_subnet"
@@ -93,7 +93,7 @@ resource "aws_security_group" "ec2_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["your-trusted-ip/32"]  # Replace with your IP
+    cidr_blocks = ["your-trusted-ip/32"] # Thay bằng IP đáng tin cậy
     description = "Allow SSH from trusted IP"
   }
   egress {
@@ -110,22 +110,52 @@ resource "aws_security_group" "ec2_sg" {
 
 # Tạo EC2 Instance
 resource "aws_instance" "web_server" {
-  ami             = var.ami_id
-  instance_type   = var.instance_type
-  subnet_id       = aws_subnet.public_subnet.id
-  vpc_security_group_ids = [aws_security_group.ec2_sg.id]
-  monitoring      = true  # Enable detailed monitoring
+  ami                         = var.ami_id
+  instance_type               = var.instance_type
+  subnet_id                   = aws_subnet.public_subnet.id
+  vpc_security_group_ids      = [aws_security_group.ec2_sg.id]
+  monitoring                  = true
+  ebs_optimized               = true
+  iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
   metadata_options {
-    http_tokens = "required"  # Use IMDSv2 only
+    http_tokens = "required"
   }
   tags = {
     Name = "web_server"
   }
 }
 
+# Tạo IAM Role và Instance Profile
+resource "aws_iam_role" "ec2_role" {
+  name               = "ec2-role"
+  assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
+}
+
+data "aws_iam_policy_document" "assume_role_policy" {
+  statement {
+    actions = ["sts:AssumeRole"]
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_instance_profile" "ec2_profile" {
+  name = "ec2-profile"
+  role = aws_iam_role.ec2_role.name
+}
+
 # Tạo VPC Flow Logs
 resource "aws_cloudwatch_log_group" "vpc_log_group" {
-  name = "vpc-flow-logs"
+  name              = "vpc-flow-logs"
+  retention_in_days = 365
+  kms_key_id        = aws_kms_key.cloudwatch_kms.arn
+}
+
+resource "aws_kms_key" "cloudwatch_kms" {
+  description         = "KMS key for CloudWatch logs"
+  enable_key_rotation = true
 }
 
 resource "aws_flow_log" "vpc_flow_log" {
