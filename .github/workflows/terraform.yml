@@ -33,6 +33,12 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
+      # Bước 4.1: Kiểm tra mã với Checkov
+      - name: Run Checkov
+        run: |
+          pip install checkov
+          checkov -d .
+
       # Bước 5: Lập kế hoạch triển khai Terraform (khi có pull request)
       - name: Terraform Plan
         if: github.event_name == 'pull_request'
@@ -42,8 +48,8 @@ jobs:
       - name: Terraform Apply
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve
- 
-       # Bước 7: Hủy hạ tầng sau khi triển khai thành công
+
+      # Bước 7: Hủy hạ tầng sau khi triển khai thành công
       - name: Terraform Destroy
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: terraform destroy -auto-approve
